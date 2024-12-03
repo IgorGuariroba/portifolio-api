@@ -12,7 +12,9 @@ class ProjectController extends Controller
     {
         try {
             $projects = $this->getProjects($request);
-            $projects->getCollection()->transform([$this, 'transformProject']);
+            $projects->getCollection()->transform(function ($project) {
+                return $this->transformProject($project);
+            });
 
             return $this->createResponse($projects);
         } catch (\Exception $e) {
@@ -30,7 +32,7 @@ class ProjectController extends Controller
         return Project::orderBy($sort, $order)->paginate($perPage, ['*'], 'page', $page);
     }
 
-    private function transformProject($project): array
+    private function transformProject($project)
     {
         return [
             'id' => $project->id,
@@ -68,8 +70,7 @@ class ProjectController extends Controller
     private function createErrorResponse(\Exception $e): JsonResponse
     {
         return response()->json([
-            'error' => 'Falha ao buscar os projetos.',
-            'message' => $e->getMessage()
+            'error' => 'Falha ao buscar os projetos.'
         ], 500);
     }
 }
