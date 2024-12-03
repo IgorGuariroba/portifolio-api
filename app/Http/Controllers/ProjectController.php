@@ -8,31 +8,34 @@ use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
+    private const DEFAULT_PAGE = 1;
+    private const DEFAULT_PER_PAGE = 10;
+    private const DEFAULT_SORT = 'id';
+    private const DEFAULT_ORDER = 'asc';
+
     public function index(Request $request): JsonResponse
     {
         try {
-            $projects = $this->getProjects($request);
-            $projects->getCollection()->transform(function ($project) {
-                return $this->transformProject($project);
-            });
+            $projects = $this->fetchProjects($request);
+            $projects->getCollection()->transform(fn($project) => $this->transformProjectData($project));
 
-            return $this->createResponse($projects);
+            return $this->buildSuccessResponse($projects);
         } catch (\Exception $e) {
-            return $this->createErrorResponse($e);
+            return $this->buildErrorResponse($e);
         }
     }
 
-    private function getProjects(Request $request)
+    private function fetchProjects(Request $request)
     {
-        $page = $request->input('page', 1);
-        $perPage = $request->input('per_page', 10);
-        $sort = $request->input('sort', 'id');
-        $order = $request->input('order', 'asc');
+        $page = $request->input('page', self::DEFAULT_PAGE);
+        $perPage = $request->input('per_page', self::DEFAULT_PER_PAGE);
+        $sort = $request->input('sort', self::DEFAULT_SORT);
+        $order = $request->input('order', self::DEFAULT_ORDER);
 
         return Project::orderBy($sort, $order)->paginate($perPage, ['*'], 'page', $page);
     }
 
-    private function transformProject($project)
+    private function transformProjectData($project): array
     {
         return [
             'id' => $project->id,
@@ -49,7 +52,7 @@ class ProjectController extends Controller
         ];
     }
 
-    private function createResponse($projects): JsonResponse
+    private function buildSuccessResponse($projects): JsonResponse
     {
         return response()->json([
             'data' => $projects->items(),
@@ -67,10 +70,11 @@ class ProjectController extends Controller
         ]);
     }
 
-    private function createErrorResponse(\Exception $e): JsonResponse
+    private function buildErrorResponse(\Exception $e): JsonResponse
     {
         return response()->json([
-            'error' => 'Falha ao buscar os projetos.'
+            'error' => 'Failed to fetch projects.',
+            'message' => $e->getMessage()
         ], 500);
     }
 }
